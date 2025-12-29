@@ -1,0 +1,17 @@
+# YOLO Webcam Configuration
+
+/**:
+  ros__parameters:
+    # Model settings
+    model_path: "/home/peru0002/ws_moveit/src/yolo/best.pt"
+    confidence_threshold: 0.25
+    device: "cuda"  # "cuda" or "cpu"
+    
+    # Camera settings
+    camera_id: 0
+    frame_rate: 30.0
+    
+    # Topic settings
+    output_topic: "/yolo/detections"
+    output_image_topic: "/yolo/image_raw"
+    output_annotated_topic: "/yolo/image_detections"

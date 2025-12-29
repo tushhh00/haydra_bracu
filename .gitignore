@@ -1,0 +1,44 @@
+# ROS2 Build artifacts
+build/
+install/
+log/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+dist/
+*.egg
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Logs
+*.log
+*.pdf
+*.gv
+
+# Camera calibration
+*.bag
+*.yaml.bak
+
+# Temporary files
+*.tmp
+.cache/
+
+# YOLO models (large files)
+# Uncomment if you don't want to track the model
+# *.pt
+# *.onnx
+# *.engine
+
+# System
+.DS_Store
+Thumbs.db

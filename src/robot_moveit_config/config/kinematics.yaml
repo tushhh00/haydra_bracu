@@ -1,0 +1,18 @@
+# Kinematics configuration for all planning groups
+# NOTE: Your robot has only 4 DOF, so it cannot reach arbitrary orientations.
+# For 4-DOF arms, we use position-only IK when possible.
+
+manipulator:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 1.0
+  kinematics_solver_attempts: 50
+  # For 4-DOF arms, allow position-only goals (ignore orientation)
+  position_only_ik: true
+
+arm:
+  kinematics_solver: kdl_kinematics_plugin/KDLKinematicsPlugin
+  kinematics_solver_search_resolution: 0.005
+  kinematics_solver_timeout: 1.0
+  kinematics_solver_attempts: 50
+  position_only_ik: true

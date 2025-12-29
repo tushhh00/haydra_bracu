@@ -1,0 +1,43 @@
+# 3D Object Detection Configuration
+# 
+# IMPORTANT: For accurate 3D detection, ensure:
+# 1. Depth is aligned to color (align_depth.enable:=true in realsense launch)
+# 2. Camera is connected to robot TF tree for MoveIt compatibility
+# 3. Verify TF: ros2 run tf2_tools view_frames
+
+/**:
+  ros__parameters:
+    # Model settings
+    model_path: ""  # Leave empty to use default best.pt
+    confidence_threshold: 0.5
+    device: "cuda"  # "cuda" or "cpu"
+    
+    # RealSense topic settings
+    # CRITICAL: Use aligned depth for accurate 3D projection!
+    color_topic: "/camera/camera/color/image_raw"
+    depth_topic: "/camera/camera/aligned_depth_to_color/image_raw"
+    camera_info_topic: "/camera/camera/color/camera_info"
+    
+    # Output topics
+    output_pose_topic: "/detected_object/pose"           # Pose in base_link (for MoveIt)
+    output_pose_camera_topic: "/detected_object/pose_camera"  # Pose in camera frame (debug)
+    output_poses_topic: "/detected_objects/poses"
+    output_image_topic: "/yolo/image_3d_detections"
+    
+    # Frame settings
+    # Camera frame where 3D points are first computed
+    camera_frame: "camera_color_optical_frame"
+    # Robot base frame for MoveIt planning
+    robot_base_frame: "base_link"
+    
+    # Detection filter (empty = detect all classes)
+    target_class: ""
+    
+    # Depth settings
+    depth_scale: 0.001      # RealSense depth is in mm, convert to meters
+    min_depth: 0.1          # Minimum valid depth in meters
+    max_depth: 2.0          # Maximum valid depth in meters
+    depth_window_size: 5    # Window size for median depth sampling (reduces noise)
+    
+    # TF settings
+    tf_timeout: 0.5         # Timeout for TF lookups in seconds
