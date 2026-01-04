@@ -321,12 +321,47 @@ class PickNode(Node):
 def main():
     """Main entry point with argument handling"""
     import sys
+    import argparse
+    
+    parser = argparse.ArgumentParser(description='Pick with IK - Move robot to position')
+    parser.add_argument('-x', type=float, help='X coordinate (meters)')
+    parser.add_argument('-y', type=float, help='Y coordinate (meters)')
+    parser.add_argument('-z', type=float, help='Z coordinate (meters)')
+    parser.add_argument('--home', action='store_true', help='Go to home position')
+    parser.add_argument('--ready', action='store_true', help='Go to ready position')
+    parser.add_argument('--detect', action='store_true', help='Use detected object (default if no coords)')
+    
+    # Parse known args to allow ROS args
+    args, _ = parser.parse_known_args()
     
     rclpy.init(args=sys.argv)
     node = PickNode()
     
     try:
-        success = node.run()
+        # Predefined positions
+        home_joints = [0.0, 0.0, 0.0, 0.0]
+        ready_joints = [0.0, 0.5, -0.5, 0.0]
+        
+        if args.home:
+            node.get_logger().info('Moving to HOME position...')
+            success = node.move_to_joints(home_joints, 3.0)
+        elif args.ready:
+            node.get_logger().info('Moving to READY position...')
+            success = node.move_to_joints(ready_joints, 3.0)
+        elif args.x is not None and args.y is not None and args.z is not None:
+            # Manual coordinates
+            x, y, z = args.x, args.y, args.z
+            node.get_logger().info(f'Moving to manual position: ({x:.3f}, {y:.3f}, {z:.3f})')
+            success = node.move_to_position(x, y, z)
+        else:
+            # Default: use detection
+            success = node.run()
+        
+        if success:
+            node.get_logger().info('✓ Motion complete!')
+        else:
+            node.get_logger().error('✗ Motion failed!')
+        
         sys.exit(0 if success else 1)
     except KeyboardInterrupt:
         node.get_logger().info('Interrupted by user')

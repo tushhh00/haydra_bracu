@@ -1,10 +1,11 @@
 # BRACU Hydra Robot - Pick and Place System
 
-A complete ROS2 pick-and-place system integrating a 4-DOF robot arm with Intel RealSense D435i camera and YOLOv8 object detection.
+A complete ROS2 pick-and-place system integrating a 4-DOF robot arm with Intel RealSense D435i camera, YOLOv8 object detection, and ESP32-based hardware control.
 
 ![ROS2 Jazzy](https://img.shields.io/badge/ROS2-Jazzy-blue)
 ![Ubuntu 24.04](https://img.shields.io/badge/Ubuntu-24.04-orange)
 ![Python 3.12](https://img.shields.io/badge/Python-3.12-green)
+![ESP32](https://img.shields.io/badge/ESP32-S3-red)
 
 ## 🎯 Features
 
@@ -13,6 +14,9 @@ A complete ROS2 pick-and-place system integrating a 4-DOF robot arm with Intel R
 - **Motion Planning**: MoveIt2 with custom IK solver for 4-DOF robot
 - **TF Integration**: Automatic 3D object localization in robot frame
 - **Pick & Place**: Automated object picking with collision avoidance
+- **Hardware Control**: ESP32-S3 firmware for 4 arm joints + 2 gripper servos
+- **Teleoperation**: Multiple teleop modes (serial, gamepad, smooth control)
+- **Real-time Control**: Butter-smooth motion with input filtering
 
 ## 📋 Table of Contents
 
@@ -34,10 +38,12 @@ A complete ROS2 pick-and-place system integrating a 4-DOF robot arm with Intel R
 - **CUDA**: 11.8+ (optional, for GPU acceleration)
 
 ### Hardware
-- **Robot**: 4-DOF articulated arm (BRACU Hydra)
+- **Robot**: 4-DOF articulated arm (BRACU Hydra) + 2 gripper servos
+- **Controller**: ESP32-S3 microcontroller
 - **Camera**: Intel RealSense D435i
 - **Computer**: 8GB RAM minimum, 16GB recommended
 - **USB**: USB 3.0 ports for camera
+- **Gamepad**: Xbox/PS4 controller (optional, for teleoperation)
 
 ## 🔧 Hardware Setup
 
@@ -51,6 +57,32 @@ A complete ROS2 pick-and-place system integrating a 4-DOF robot arm with Intel R
 1. Connect robot controller to computer
 2. Verify serial/USB connection
 3. Test joint control: `ros2 topic echo /joint_states`
+
+### ESP32-S3 Firmware
+
+The robot uses an ESP32-S3 for servo control with simple serial protocol:
+
+**Servo Configuration:**
+| Joint | GPIO | Range | Home |
+|-------|------|-------|------|
+| Base | 4 | 80-130° | 98° |
+| Joint 1 | 5 | 20-85° | 85° |
+| Joint 2 | 6 | 60-85° | 85° |
+| Joint 3 | 7 | 0-180° | 90° |
+| Gripper 1 | 15 | 0-60° | 0° |
+| Gripper 2 | 16 | 0-100° | 0° |
+
+**Protocol:**
+```
+Command: "J <base> <j1> <j2> <j3> <grip1> <grip2>\n" (degrees)
+Response: "S <base> <j1> <j2> <j3> <grip1> <grip2>\n" (current positions)
+```
+
+**Flash firmware:**
+```bash
+cd esp32_firmware
+pio run --target upload
+```
 
 ## 🚀 Installation
 
@@ -206,6 +238,44 @@ python3 src/robot_moveit_config/scripts/pick_with_ik.py
 
 # Option 2: Using joint-space control (more reliable)
 python3 src/robot_moveit_config/scripts/pick_detected_object.py
+
+# Option 3: With specific coordinates
+python3 src/robot_moveit_config/scripts/pick_with_ik.py -x 0.3 -y 0.4 -z 0.5
+
+# Option 4: Predefined positions
+python3 src/robot_moveit_config/scripts/pick_with_ik.py --home
+python3 src/robot_moveit_config/scripts/pick_with_ik.py --ready
+```
+
+### 🎮 Teleoperation Modes
+
+#### Serial Teleop (Real Hardware)
+Direct serial control for ESP32-connected robot with gamepad:
+
+```bash
+# Connect gamepad and ESP32, then run:
+ros2 run robot_moveit_config serial_teleop.py
+```
+
+**Controls (Xbox):**
+- Left Stick X/Y: Base / Joint 1
+- Right Stick X/Y: Joint 3 / Joint 2
+- LB / RB: Gripper 1 Close/Open
+- LT / RT: Gripper 2 Close/Open
+- A: Enable | B: E-Stop | Start: Home
+
+#### Smooth Gamepad Teleop (Simulation)
+Butter-smooth motion control for MoveIt simulation:
+
+```bash
+ros2 run robot_moveit_config smooth_teleop.py
+```
+
+#### MoveIt Servo Teleop
+Real-time Cartesian control with MoveIt Servo:
+
+```bash
+ros2 launch robot_moveit_config teleop_gamepad.launch.py
 ```
 
 ### Testing Components
@@ -350,7 +420,11 @@ export PYTHONPATH=$PYTHONPATH:$(pwd)/install/lib/python3.12/site-packages
 ## 📁 Project Structure
 
 ```
-ws_moveit/
+haydra_bracu/
+├── esp32_firmware/                  # ESP32-S3 servo controller
+│   └── src/
+│       └── main.cpp                # Firmware with serial protocol
+│
 ├── src/
 │   ├── robot_description/          # Robot URDF/xacro
 │   │   ├── urdf/
@@ -362,28 +436,46 @@ ws_moveit/
 │   │   ├── config/
 │   │   │   ├── kinematics.yaml    # IK solver config
 │   │   │   ├── joint_limits.yaml
+│   │   │   ├── servo_config.yaml  # MoveIt Servo settings
 │   │   │   └── moveit_controllers.yaml
 │   │   ├── launch/
 │   │   │   ├── pick_place_system.launch.py  # Main launch file
+│   │   │   ├── teleop_gamepad.launch.py     # Gamepad teleop
 │   │   │   └── moveit.launch.py
 │   │   └── scripts/
+│   │       ├── serial_teleop.py             # ESP32 serial control
+│   │       ├── smooth_teleop.py             # Smooth gamepad control
+│   │       ├── gamepad_teleop.py            # MoveIt Servo teleop
+│   │       ├── real_hardware_teleop.py      # micro-ROS teleop
 │   │       ├── pick_detected_object.py      # Joint-space picker
 │   │       ├── pick_with_ik.py              # IK-based picker
 │   │       └── robot_ik_solver.py           # Custom IK solver
 │   │
-│   ├── yolo/                        # Object detection
-│   │   ├── yolo_detector.py        # ROS2 YOLO node
-│   │   └── best.pt                 # Trained model
-│   │
-│   └── realsense-ros/              # Camera driver (submodule)
+│   └── yolo/                        # Object detection
+│       ├── yolo_detector.py        # ROS2 YOLO node
+│       └── best.pt                 # Trained model
 │
-├── build/                          # Build artifacts
-├── install/                        # Installed packages
-├── log/                            # Build/runtime logs
+├── launch_moveit_demo.sh           # Quick launch script
+├── launch_system.sh                # Full system launch
+├── launch_real_hardware.sh         # Real robot launch
 └── README.md                       # This file
 ```
 
 ## 🔍 Key Files Explained
+
+### [esp32_firmware/src/main.cpp](esp32_firmware/src/main.cpp)
+ESP32-S3 firmware for servo control:
+- Controls 4 arm joints + 2 gripper servos
+- Simple serial protocol (no micro-ROS needed)
+- Smooth motion with acceleration limiting
+- Auto-home on startup
+
+### [serial_teleop.py](src/robot_moveit_config/scripts/serial_teleop.py)
+Bridges ROS2 and ESP32 hardware:
+- Gamepad input to servo commands
+- Coordinate space conversion (URDF ↔ Servo)
+- Real-time joint state publishing
+- Gripper control with LB/RB and LT/RT
 
 ### [pick_place_system.launch.py](src/robot_moveit_config/launch/pick_place_system.launch.py)
 Main launch file combining all components:
@@ -402,15 +494,16 @@ Custom numerical IK solver for 4-DOF robot:
 
 ### [pick_detected_object.py](src/robot_moveit_config/scripts/pick_detected_object.py)
 Joint-space motion control (most reliable):
-- Uses MoveGroup action
+- Uses MoveIt2 planning service
 - Direct joint goals
-- No IK solver dependency
+- Synchronous execution
 
 ### [pick_with_ik.py](src/robot_moveit_config/scripts/pick_with_ik.py)
 Cartesian motion control:
 - Uses custom IK solver
 - Position-based goals
-- Approach offset for safety
+- Command-line arguments for coordinates
+- Predefined positions (home, ready)
 
 ## 🛠️ Development
 
@@ -521,6 +614,6 @@ This project is licensed under the MIT License.
 
 ---
 
-**Last Updated**: December 2025  
+**Last Updated**: January 2026  
 **ROS2 Version**: Jazzy Jalisco  
 **Status**: Active Development
